@@ -68,7 +68,8 @@ function Changelog() {
     "Type checking is supported.",
     "Constant folding is supported (for some binary expressions).",
     "Better type checking of function calls.",
-    "Updated examples."
+    "Updated examples.",
+    "Precedences among operators are supported."
   ];
   return (
     <>
