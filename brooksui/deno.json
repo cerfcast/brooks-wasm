@@ -1,0 +1,6 @@
+{
+  "allowScripts": {
+    "allow": [],
+    "deny": ["npm:@swc/core@1.15.41"]
+  }
+}

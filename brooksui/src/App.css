@@ -1,0 +1,41 @@
+.left {
+  min-width: 50%;
+  max-width: 50%;
+  min-height: 800px;
+  margin: 0 auto;
+}
+
+.right {
+  min-width: 50%;
+  max-width: 50%;
+  margin: 0 auto;
+}
+
+.spacer {
+    min-height: 2em;
+    max-height: 2em;
+}
+
+.try {
+  min-width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  float: left;
+}
+
+.changelog {
+  min-width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  float: left;
+  border-top: 5px black solid;
+  background-color: lightgrey;
+}
+
+.double {
+  min-width: 100%;
+  display: flex;
+  flex-direction: row;
+  float: left;
+}
+
