@@ -29,12 +29,15 @@ function TryItOut({ source, compile }: TryItOutProps) {
   const exprs = [
     ["5 + 3", ""],
     ['path_element("f", 2)', ""],
-    ['path_element("f")', "Will Produce An Error"],
+    ['path_element("f")', "Will Produce A Arguments/Parameters Error"],
     ["5 + (8 + 2)", ""],
     ["true and false", ""],
     ["88 % 2", ""],
     ["boolean(5)", ""],
-    ["boolean(\"hello\")", "Will Produce An Error"],
+    ["boolean(\"hello\")", "Will Produce A Type Error"],
+    ["true ? 5 : 4", ""],
+    ["true ? \"a\" : false ? \"b\" : 10", "Will Produce A Type Error"],
+    ["false ? 3 : false ? 8 : (19 + 1) / 2", ""]
   ];
   return (
     <>
@@ -69,7 +72,8 @@ function Changelog() {
     "Constant folding is supported (for some binary expressions).",
     "Better type checking of function calls.",
     "Updated examples.",
-    "Precedences among operators are supported."
+    "Precedences among operators are supported.",
+    "Ternary expressions are supported."
   ];
   return (
     <>
