@@ -29,6 +29,7 @@ function TryItOut({ source, compile }: TryItOutProps) {
   const exprs = [
     ["5 + 3", ""],
     ['path_element("f", 2)', ""],
+    ['path_element(req^uri^path, 2)', ""],
     ['path_element("f")', "Will Produce A Arguments/Parameters Error"],
     ["5 + (8 + 2)", ""],
     ["true and false", ""],
@@ -73,7 +74,8 @@ function Changelog() {
     "Better type checking of function calls.",
     "Updated examples.",
     "Precedences among operators are supported.",
-    "Ternary expressions are supported."
+    "Ternary expressions are supported.",
+    "User-defined types (e.g., struct-s) are supported."
   ];
   return (
     <>

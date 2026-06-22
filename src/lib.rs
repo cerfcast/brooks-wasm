@@ -15,13 +15,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use wasm_bindgen::prelude::*;
 
 use brooks_lib::{
     analysis::{MelAnalysisContext, MelOptimizer, MelTypeChecker},
-    ast::{AstVisitorDriver, Type::{self, Function}},
+    ast::{
+        AstVisitorDriver, Struct,
+        Type::{self, Function},
+    },
     compiler::{CompilerError, MELCompilerContext, SyntaxError::EmptyContext, compile},
     expect_expr,
     serializer::{AstTextSerializer, AstTextSerializerContext},
@@ -52,6 +55,21 @@ pub fn compile_and_serialize(source: &str) -> std::result::Result<String, JsValu
         "boolean",
         Function(Arc::new(Type::Boolean), vec![Type::Integer]),
     ));
+
+    let mut uris = Struct {
+        name: "Uri".to_string(),
+        fields: HashMap::new(),
+    };
+    uris.fields.insert("path".to_string(), Type::String);
+    uris.fields.insert("query".to_string(), Type::String);
+
+    let mut reqs = Struct {
+        name: "Req".to_string(),
+        fields: HashMap::new(),
+    };
+
+    reqs.fields.insert("uri".to_string(), Type::Struct(uris));
+    context = context.update_scopes(context.scopes.insert("req", Type::Struct(reqs)));
 
     let result = match driver.visit(&ast, &visitor, context) {
         Ok(result) => result,
