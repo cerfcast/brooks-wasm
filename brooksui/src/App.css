@@ -50,6 +50,24 @@
   background-color: lightgrey;
 }
 
+.request_method_uri {
+  display: flex;
+  width: 100%;
+}
+
+.request_method_uri .uri{
+  flex: 1;
+}
+
+.request_headers {
+  width: 100%;
+}
+
+.request_headers .column_header{
+  text-align: left;
+  text-decoration: underline;
+}
+
 .double {
   min-width: 100%;
   display: flex;

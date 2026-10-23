@@ -15,76 +15,181 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-use std::{collections::HashMap, sync::Arc};
-
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
 use brooks_lib::{
-    analysis::{MelAnalysisContext, MelOptimizer, MelTypeChecker},
-    ast::{
-        AstVisitorDriver, Struct,
-        Type::{self, Function},
+    environment::scope::Scope,
+    mel::{
+        self,
+        analysis::{MelAnalysisContext, MelOptimizer, MelTypeChecker},
+        ast::AstVisitorDriver,
+        interpreter::{
+            builtins::builtin_builtin_function_interpreters, interpret::MelInterpContext,
+            values::TypedValue,
+        },
+        scope::builtin_function_types,
+        serializer::{AstTextSerializer, AstTextSerializerContext},
     },
-    compiler::{CompilerError, MELCompilerContext, SyntaxError::EmptyContext, compile},
-    expect_expr,
-    serializer::{AstTextSerializer, AstTextSerializerContext},
 };
 
-#[wasm_bindgen]
-pub fn compile_and_serialize(source: &str) -> std::result::Result<String, JsValue> {
-    let compile_result = compile(source);
-    let compiled = match compile_result {
-        Ok(compiled) => compiled,
-        Err(e) => return Ok(format!("Could not compile the expression: {e:?}")),
-    };
+#[derive(Debug, Clone, Deserialize)]
+struct VirtualRequestHeader {
+    pub name: String,
+    pub value: String,
+}
 
-    let ast = expect_expr!(compiled)
-        .ok_or(CompilerError::SyntaxError(EmptyContext))
-        .expect("Missing expected AST after compilation");
+#[derive(Debug, Clone, Deserialize)]
+struct VirtualRequest {
+    pub method: String,
+    pub uri: String,
+    pub headers: Vec<VirtualRequestHeader>,
+}
+
+impl TryFrom<VirtualRequest> for http::Request<Vec<u8>> {
+    type Error = std::io::Error;
+
+    fn try_from(value: VirtualRequest) -> Result<Self, Self::Error> {
+        let mut req = http::request::Builder::new();
+
+        req = req.method(if value.method == "GET" {
+            http::method::Method::GET
+        } else if value.method == "POST" {
+            http::method::Method::POST
+        } else {
+            return Err(std::io::Error::other("Invalid method"));
+        });
+
+        for vrh in value.headers {
+            req = req.header(vrh.name, vrh.value)
+        }
+
+        req = req.uri(value.uri);
+        req.body(vec![]).map_err(std::io::Error::other)
+    }
+}
+
+#[derive(Serialize)]
+struct InterpretResult {
+    result: String,
+    tpe: String,
+}
+
+#[derive(Serialize)]
+struct InterpretErrorLocation {
+    start: usize,
+    extent: usize,
+}
+
+#[derive(Serialize)]
+struct InterpretError {
+    msg: String,
+    location: InterpretErrorLocation,
+}
+
+#[wasm_bindgen]
+pub fn compile_and_serialize(
+    source: &str,
+    request: &str,
+) -> std::result::Result<Vec<String>, JsValue> {
+    let virtual_request =
+        serde_json::from_str::<VirtualRequest>(request).expect("Could not deserialize a request");
+
+    let request: http::Request<Vec<u8>> = virtual_request.try_into().map_err(|e| {
+        JsError::new(&format!(
+            "Could not generate request from virtual request: {e}"
+        ))
+    })?;
+
+    let compiled = mel::compiler::compile(source).map_err(|e| {
+        JsError::new(
+            &serde_json::to_string(&InterpretError {
+                msg: (e.error).to_string(),
+                location: InterpretErrorLocation {
+                    start: e.location.start,
+                    extent: e.location.extent,
+                },
+            })
+            .expect("Could not serialize error"),
+        )
+    })?;
 
     let driver = AstVisitorDriver {};
     let visitor = MelTypeChecker {};
     let mut context = MelAnalysisContext::default();
 
-    context = context.update_scopes(context.scopes.insert(
-        "path_element",
-        Function(Arc::new(Type::String), vec![Type::String, Type::Integer]),
-    ));
+    context = context.update_scopes(&(&builtin_function_types() + &request.clone().into()).into());
 
-    context = context.update_scopes(context.scopes.insert(
-        "boolean",
-        Function(Arc::new(Type::Boolean), vec![Type::Integer]),
-    ));
-
-    let mut uris = Struct {
-        name: "Uri".to_string(),
-        fields: HashMap::new(),
-    };
-    uris.fields.insert("path".to_string(), Type::String);
-    uris.fields.insert("query".to_string(), Type::String);
-
-    let mut reqs = Struct {
-        name: "Req".to_string(),
-        fields: HashMap::new(),
-    };
-
-    reqs.fields.insert("uri".to_string(), Type::Struct(uris));
-    context = context.update_scopes(context.scopes.insert("req", Type::Struct(reqs)));
-
-    let result = match driver.visit(&ast, &visitor, context) {
-        Ok(result) => result,
-        Err(e) => return Ok(format!("Type Error: {e}")),
-    };
+    let result = driver.visit(&compiled, &visitor, context).map_err(|e| {
+        JsError::new(
+            &serde_json::to_string(&InterpretError {
+                msg: (e.error).to_string(),
+                location: InterpretErrorLocation {
+                    start: e.location.start,
+                    extent: e.location.extent,
+                },
+            })
+            .expect("Could not serialize error"),
+        )
+    })?;
 
     let driver = AstVisitorDriver {};
     let visitor = MelOptimizer {};
-    let result = driver
-        .visit(&ast, &visitor, result)
-        .expect("Could not optimize the expression");
+    let result = driver.visit(&compiled, &visitor, result);
 
-    let result = match result.expr {
-        Some(e) => e,
-        None => return Ok("Could not analyze expression.".into()),
+    let result = result.map_err(|e| {
+        JsError::new(
+            &serde_json::to_string(&InterpretError {
+                msg: (e.error).to_string(),
+                location: InterpretErrorLocation {
+                    start: e.location.start,
+                    extent: e.location.extent,
+                },
+            })
+            .expect("Could not serialize error"),
+        )
+    })?;
+
+    let result = result.expr.ok_or(JsError::new(
+        &serde_json::to_string(&InterpretError {
+            msg: "Could not analyze expression: No analyzed expression produced.".to_string(),
+            location: InterpretErrorLocation {
+                start: 0,
+                extent: 0,
+            },
+        })
+        .expect("Could not serialize error"),
+    ))?;
+
+    let mut interp_context = MelInterpContext::default();
+    interp_context = interp_context.update_scopes(
+        &(&builtin_builtin_function_interpreters()
+            + &(TryInto::<Scope<TypedValue>>::try_into(request).expect("TODO")))
+            .into(),
+    );
+
+    let interpret_res = mel::interpreter::interpret(&result, interp_context).map_err(|e| {
+        JsError::new(
+            &serde_json::to_string(&InterpretError {
+                msg: (e.error).to_string(),
+                location: InterpretErrorLocation {
+                    start: e.location.start,
+                    extent: e.location.extent,
+                },
+            })
+            .expect("Could not serialize error"),
+        )
+    })?;
+
+    let pretty_interpreter_res = match interpret_res.val {
+        Some(v) => InterpretResult {
+            result: v.to_string(),
+            tpe: v.tpe.to_string(),
+        },
+        None => InterpretResult {
+            result: "No value generated.".to_string(),
+            tpe: "".to_string(),
+        },
     };
 
     let driver = AstVisitorDriver {};
@@ -93,9 +198,22 @@ pub fn compile_and_serialize(source: &str) -> std::result::Result<String, JsValu
         serialized: "".to_string(),
         indent: 0,
     };
-    let result = driver
-        .visit(&result, &visitor, context)
-        .expect("Could not serialize");
 
-    Ok(result.serialized)
+    let result = driver.visit(&result, &visitor, context).map_err(|_| {
+        JsError::new(
+            &serde_json::to_string(&InterpretError {
+                msg: "Could not serialize the AST".to_string(),
+                location: InterpretErrorLocation {
+                    start: 0,
+                    extent: 0,
+                },
+            })
+            .expect("Could not serialize error"),
+        )
+    })?;
+
+    Ok(vec![
+        result.serialized,
+        serde_json::to_string(&pretty_interpreter_res).expect("Could not serialize the result."),
+    ])
 }
