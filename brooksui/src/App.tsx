@@ -29,6 +29,8 @@ import {
   orDefault,
 } from "./Brooks.ts";
 
+const MelCompilerVersion = "0.1.11";
+
 type VirtualRequestMethod = "GET" | "POST";
 
 const VirtualRequestMethods: Map<VirtualRequestMethod, string> = new Map([
@@ -326,6 +328,7 @@ function Changelog() {
             return <li key={i}>{v}</li>;
           })}
         </ol>
+        MEL Compiler Explorer Version: {MelCompilerVersion}
       </div>
     </>
   );
