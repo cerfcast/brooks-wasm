@@ -11,9 +11,12 @@ jobs:
         with:
           submodules: true
       - uses: actions/setup-node@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9
       - run: cargo install wasm-pack
       - run: wasm-pack build
-      - run: npm install
+      - run: deno install
         working-directory: brooksui
       - run: npm run build
         working-directory: brooksui
