@@ -18,11 +18,11 @@ jobs:
       - run: wasm-pack build
       - run: deno install
         working-directory: brooksui
-      - run: npm run build
+      - run: deno run build
         working-directory: brooksui
       - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v4
+        run: deno run deploy
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         working-directory: brooksui
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
