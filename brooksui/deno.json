@@ -1,6 +1,5 @@
 {
   "allowScripts": {
-    "allow": [],
-    "deny": ["npm:@swc/core@1.15.41"]
+    "allow": ["npm:@swc/core@1.15.41", "npm:esbuild@0.28.2", "npm:workerd@1.20261012.1", "npm:workerd@1.20261019.1"]
   }
 }
