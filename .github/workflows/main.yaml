@@ -13,5 +13,7 @@ jobs:
       - uses: actions/setup-node@v7
       - run: cargo install wasm-pack
       - run: wasm-pack build
+      - run: npm install
+        working-directory: brooksui
       - run: npm run build
         working-directory: brooksui
