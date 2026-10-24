@@ -29,7 +29,7 @@ import {
   orDefault,
 } from "./Brooks.ts";
 
-const MelCompilerVersion = "0.1.11";
+const MelCompilerVersion = "0.1.12";
 
 type VirtualRequestMethod = "GET" | "POST";
 
