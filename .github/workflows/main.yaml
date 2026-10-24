@@ -3,8 +3,8 @@ on: [push, pull_request]
 name: Continuous Integration
 
 jobs:
-  brooksui-tests:
-    name: Build Tests
+  brooksui-deploy:
+    name: Build And Deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -15,10 +15,13 @@ jobs:
         with:
           deno-version: v2.9
       - run: cargo install wasm-pack
+        name: Install WASM Pack
       - run: wasm-pack build
+        name: Build Rust Library
       - run: deno install
         working-directory: brooksui
       - run: deno run build
+        name: Build React App
         working-directory: brooksui
       - name: Deploy Worker
         run: deno run deploy
