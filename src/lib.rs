@@ -28,8 +28,8 @@ use brooks_lib::{
             builtins::builtin_builtin_function_interpreters, interpret::MelInterpContext,
             values::TypedValue,
         },
-        scope::builtin_function_types,
         serializer::{AstTextSerializer, AstTextSerializerContext},
+        types::builtin_function_types,
     },
 };
 
