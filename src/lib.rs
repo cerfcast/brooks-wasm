@@ -118,7 +118,7 @@ pub fn compile_and_serialize(
     let visitor = MelTypeChecker {};
     let mut context = MelAnalysisContext::default();
 
-    context = context.update_scopes(&(&builtin_function_types() + &request.clone().into()).into());
+    context = context.update_scopes(&(&builtin_function_types() + &(&request).into()).into());
 
     let result = driver.visit(&compiled, &visitor, context).map_err(|e| {
         JsError::new(
@@ -164,7 +164,7 @@ pub fn compile_and_serialize(
     let mut interp_context = MelInterpContext::default();
     interp_context = interp_context.update_scopes(
         &(&builtin_builtin_function_interpreters()
-            + &(TryInto::<Scope<TypedValue>>::try_into(request).expect("TODO")))
+            + &(TryInto::<Scope<TypedValue>>::try_into(&request).expect("TODO")))
             .into(),
     );
 

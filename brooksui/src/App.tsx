@@ -29,7 +29,7 @@ import {
   orDefault,
 } from "./Brooks.ts";
 
-const MelCompilerVersion = "0.1.14";
+const MelCompilerVersion = "0.1.15";
 
 type VirtualRequestMethod = "GET" | "POST";
 
@@ -246,11 +246,12 @@ interface TryItOutProps {
 
 function TryItOut({ source, compile }: TryItOutProps) {
   const exprs = [
+    ["\"Hello,\" . \"World.\"", ""],
     ["5 + 3", ""],
-    ["req^h^cookie", ""],
-    ["req^method", ""],
+    ["req.h.cookie", ""],
+    ["req.method", ""],
     ['path_element("f", 2)', ""],
-    ["path_element(req^uri^path, 2)", ""],
+    ["path_element(req.uri.path, 2)", ""],
     ['path_element("f")', "Will Produce A Arguments/Parameters Error"],
     ["5 + (8 + 2)", ""],
     ["true and false", ""],
@@ -318,6 +319,7 @@ function Changelog() {
     "Clean up formatting.",
     "Stylize output.",
     "Infrastructure changes to make deserializing results from Brooks safer.",
+    "Support . as the string concatenation operator and . as the member access operator.",
   ];
   return (
     <>
